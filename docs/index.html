@@ -3,6 +3,9 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 		<title>Arc</title>
 		<style>
 html, body, #canvas {
@@ -94,7 +97,51 @@ body {
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
 <link rel="manifest" href="index.manifest.json">
 
-	</head>
+	<style>
+html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; height: 100dvh !important; min-height: 100dvh !important; overflow: hidden !important; background: #000 !important; overscroll-behavior: none; -webkit-text-size-adjust: 100%; touch-action: none; }
+body { position: fixed !important; inset: 0 !important; }
+#canvas { position: absolute !important; inset: 0 !important; display: block !important; width: 100% !important; height: 100% !important; }
+</style>
+<script>
+(function () {
+    function updateViewport() {
+        const viewport = window.visualViewport;
+        const height = viewport ? viewport.height : window.innerHeight;
+        document.documentElement.style.height = height + 'px';
+        document.body.style.height = height + 'px';
+        window.scrollTo(0, 0);
+        const canvas = document.getElementById('canvas');
+        if (canvas) { canvas.style.width = '100%'; canvas.style.height = '100%'; }
+    }
+    window.addEventListener('load', updateViewport, { passive: true });
+    window.addEventListener('resize', updateViewport, { passive: true });
+    window.addEventListener('orientationchange', function () {
+        setTimeout(updateViewport, 50);
+        setTimeout(updateViewport, 250);
+        setTimeout(updateViewport, 600);
+    }, { passive: true });
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', updateViewport, { passive: true });
+        window.visualViewport.addEventListener('scroll', updateViewport, { passive: true });
+    }
+    window.__arcCacheReady = (async function () {
+        try {
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map(function (registration) { return registration.unregister(); }));
+            }
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(function (key) { return caches.delete(key); }));
+            }
+            console.info('Arc: old service workers and caches cleared.');
+        } catch (error) {
+            console.warn('Arc cache cleanup failed; starting normally.', error);
+        }
+    })();
+})();
+</script>
+</head>
 	<body>
 		<canvas id="canvas">
 			Your browser does not support the canvas tag.
@@ -112,9 +159,10 @@ body {
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":55585140,"index.wasm":39513091},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"serviceWorker":"index.service.worker.js"};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":53677860,"index.wasm":39513091},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"serviceWorker":null};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
+const arcStartGame = async (options) => { await Promise.resolve(window.__arcCacheReady); return engine.startGame(options); };
 
 (function () {
 	const statusOverlay = document.getElementById('status');
@@ -200,7 +248,7 @@ const engine = new Engine(GODOT_CONFIG);
 		}
 	} else {
 		setStatusMode('progress');
-		engine.startGame({
+		arcStartGame({
 			'onProgress': function (current, total) {
 				if (current > 0 && total > 0) {
 					statusProgress.value = current;
